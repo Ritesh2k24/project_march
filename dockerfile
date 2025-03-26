@@ -1,7 +1,7 @@
 # Use the official CentOS Apache HTTP Server image
 FROM centos/httpd
 
-# Install required packages
+# Install required packages.
 RUN yum install -y unzip curl && yum clean all
 
 # Set working directory.
