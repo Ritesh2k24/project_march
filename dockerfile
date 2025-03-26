@@ -4,7 +4,7 @@ FROM centos/httpd
 # Install required packages.
 RUN yum install -y unzip curl && yum clean all
 
-# Set working directory.
+# Set working directory..
 WORKDIR /var/www/html/
 
 # Download and unzip the web content.
