@@ -12,7 +12,7 @@ RUN curl -o photogenic.zip https://www.free-css.com/assets/files/free-css-templa
     && unzip photogenic.zip -d /var/www/html/ \
     && rm photogenic.zip
 
-# Expose port 80 for HTTP. Edit the inbound rule for kubernetes instance as well
+# Expose port 80 for HTTP. Edit the inbound rule for kubernetes instance as well.
 EXPOSE 80
 
 # Start Apache HTTP Server
