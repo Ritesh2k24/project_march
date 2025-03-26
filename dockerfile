@@ -7,7 +7,7 @@ RUN yum install -y unzip curl && yum clean all
 # Set working directory.
 WORKDIR /var/www/html/
 
-# Download and unzip the web content
+# Download and unzip the web content.
 RUN curl -o photogenic.zip https://www.free-css.com/assets/files/free-css-templates/download/page254/photogenic.zip \
     && unzip photogenic.zip -d /var/www/html/ \
     && rm photogenic.zip
