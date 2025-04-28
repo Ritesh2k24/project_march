@@ -1,0 +1,81 @@
+node {
+    stage('Git Checkout') {
+        git branch: 'master', url: 'https://github.com/Ritesh2k24/project_march'
+    }
+
+    stage ('Sending docker file to ansible server over ssh') {
+        sshagent(['ansible-ssh-user']) {
+            sh 'ssh -o StrictHostKeyChecking=no ubuntu@52.72.51.62 "exit"'
+            sh 'scp -o StrictHostKeyChecking=no -r ${WORKSPACE}/* ubuntu@52.72.51.62:/home/ubuntu/'
+        }
+    }
+
+
+    stage('Docker Image Building on Ansible Server') {
+        sshagent(['ansible-ssh-user']) {
+            sh '''
+            LOWERCASE_JOB_NAME=$(echo "${JOB_NAME}" | tr '[:upper:]' '[:lower:]')
+            ssh -o StrictHostKeyChecking=no ubuntu@52.72.51.62 "
+            cd /home/ubuntu/ &&
+            docker build -t ${LOWERCASE_JOB_NAME}:v1.${BUILD_ID} ."
+                    '''
+        }
+    }
+
+
+    stage ('Docker Image Tagging') {
+        sshagent(['ansible-ssh-user']) {
+            def imageName = JOB_NAME.toLowerCase() // Convert to lowercase to avoid errors
+
+            sh """
+            ssh -o StrictHostKeyChecking=no ubuntu@52.72.51.62 "
+            docker image tag ${imageName}:v1.${BUILD_ID} ritesh2k24/${imageName}:v1.${BUILD_ID} &&
+            docker image tag ${imageName}:v1.${BUILD_ID} ritesh2k24/${imageName}:latest
+            "
+            """
+        }
+    }
+
+
+   stage('Push Docker Image to Docker Hub') {
+       sshagent(['ansible-ssh-user']) {
+           withCredentials([string(credentialsId: 'dockerhub_pass', variable: 'DOCKERHUB_PASSWORD')]) {
+            // Convert JOB_NAME to lowercase
+               def lowercaseJobName = JOB_NAME.toLowerCase()
+
+            // SSH into the Ansible server and execute commands
+               sh """
+                   ssh -o StrictHostKeyChecking=no ubuntu@52.72.51.62 '
+                    # Log in to Docker Hub using credentials
+                       echo "\$DOCKERHUB_PASSWORD" | docker login -u ritesh2k24 --password-stdin
+
+                    # Push the Docker images
+                       docker image push ritesh2k24/${lowercaseJobName}:v1.${BUILD_ID}
+                       docker image push ritesh2k24/${lowercaseJobName}:latest
+                   '
+               """
+            }   
+        }
+    }
+    
+    stage('Copy files from Jenkins to Kubernetes') {
+       sshagent(['Kubernetes_server']) {
+            sh '''
+            scp -r -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/Project_March/* ubuntu@54.227.60.35:/home/ubuntu/
+            '''   
+        }
+    }
+    
+    stage('Kubernetes Deployment using Jenkins') {
+       sshagent(['Kubernetes_server']) {
+            sh '''
+            ssh -o StrictHostKeyChecking=no ubuntu@54.227.60.35 '
+            cd /home/ubuntu/
+            sudo microk8s kubectl apply -f Deployment.yml &&
+            sudo microk8s kubectl apply -f service.yml
+            '
+            '''
+        }
+    }
+    
+}
